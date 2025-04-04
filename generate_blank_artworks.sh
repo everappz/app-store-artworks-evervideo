@@ -1,16 +1,28 @@
 #!/bin/bash
 
-# Constants for output 1
+# Constants for output 1 (iPhone)
 BG1_WIDTH=1290
 BG1_HEIGHT=2796
 SCALE_PERCENT_1=75
 BOTTOM_MARGIN_1=20
+CORNER_RADIUS_DIVIDER_1=20
+SHADOW_DIVIDER_1=20
 
-# Constants for output 2
+# Constants for output 2 (iPad)
 BG2_WIDTH=2064
 BG2_HEIGHT=2752
 SCALE_PERCENT_2=70
 BOTTOM_MARGIN_2=20
+CORNER_RADIUS_DIVIDER_2=20
+SHADOW_DIVIDER_2=20
+
+# Constants for output 3 (Mac)
+BG3_WIDTH=2880
+BG3_HEIGHT=1800
+SCALE_PERCENT_3=55
+BOTTOM_MARGIN_3=0
+CORNER_RADIUS_DIVIDER_3=68
+SHADOW_DIVIDER_3=40
 
 # Shared settings
 # Avoid grayscale colors
@@ -41,15 +53,18 @@ GRADIENTS=(
 	TEMP_DIR="temp"
 	SUBFOLDER_1="${BG1_WIDTH}x${BG1_HEIGHT}"
 	SUBFOLDER_2="${BG2_WIDTH}x${BG2_HEIGHT}"
+	SUBFOLDER_3="${BG3_WIDTH}x${BG3_HEIGHT}"
 
 	script_dir="$(cd "$(dirname "$0")" && pwd)"
 	screenshots1_dir="$script_dir/screenshots/$SUBFOLDER_1"
 	screenshots2_dir="$script_dir/screenshots/$SUBFOLDER_2"
+	screenshots3_dir="$script_dir/screenshots/$SUBFOLDER_3"
 	output1_path="$script_dir/$OUTPUT_DIR/$SUBFOLDER_1"
 	output2_path="$script_dir/$OUTPUT_DIR/$SUBFOLDER_2"
+	output3_path="$script_dir/$OUTPUT_DIR/$SUBFOLDER_3"
 	temp_path="$script_dir/$TEMP_DIR"
 
-	mkdir -p "$output1_path" "$output2_path" "$temp_path"
+	mkdir -p "$output1_path" "$output2_path" "$output3_path" "$temp_path"
 
 	# Check ImageMagick
 	if ! command -v magick >/dev/null; then
@@ -84,6 +99,8 @@ GRADIENTS=(
 		local output_name=$6
 		local gradient_index=$7
 		local bottom_margin=$8
+		local corner_radius_divider=$9
+		local shadow_divider=${10}
 
 		resized="$temp_path/${output_name}_resized.png"
 		rounded="$temp_path/${output_name}_rounded.png"
@@ -99,8 +116,8 @@ GRADIENTS=(
 		# Get dimensions
 		width=$(magick identify -format "%w" "$resized")
 		height=$(magick identify -format "%h" "$resized")
-		radius=$((width / 20))
-		blur=$((width / 20))
+		radius=$((width / corner_radius_divider))
+		blur=$((width / shadow_divider))
 		offset=0
 	
 		# Extract second color from gradient for border
@@ -158,14 +175,16 @@ GRADIENTS=(
 	}
 
 	# Define arrays for dual version parameters
-	BG_WIDTHS=($BG1_WIDTH $BG2_WIDTH)
-	BG_HEIGHTS=($BG1_HEIGHT $BG2_HEIGHT)
-	SCALE_PERCENTS=($SCALE_PERCENT_1 $SCALE_PERCENT_2)
-	BOTTOM_MARGINS=($BOTTOM_MARGIN_1 $BOTTOM_MARGIN_2)
-	OUTPUT_PATHS=("$output1_path" "$output2_path")
-	SCREENSHOTS_DIRS=("$screenshots1_dir" "$screenshots2_dir")
+	BG_WIDTHS=($BG1_WIDTH $BG2_WIDTH $BG3_WIDTH)
+	BG_HEIGHTS=($BG1_HEIGHT $BG2_HEIGHT $BG3_HEIGHT)
+	SCALE_PERCENTS=($SCALE_PERCENT_1 $SCALE_PERCENT_2 $SCALE_PERCENT_3)
+	BOTTOM_MARGINS=($BOTTOM_MARGIN_1 $BOTTOM_MARGIN_2 $BOTTOM_MARGIN_3)
+	CORNER_RADIUS_DIVIDERS=($CORNER_RADIUS_DIVIDER_1 $CORNER_RADIUS_DIVIDER_2 $CORNER_RADIUS_DIVIDER_3)
+	SHADOW_DIVIDERS=($SHADOW_DIVIDER_1 $SHADOW_DIVIDER_2 $SHADOW_DIVIDER_3)
+	OUTPUT_PATHS=("$output1_path" "$output2_path" "$output3_path")
+	SCREENSHOTS_DIRS=("$screenshots1_dir" "$screenshots2_dir" "$screenshots3_dir")
 
-	for i in 0 1; do
+	for ((i = 0; i < ${#SCREENSHOTS_DIRS[@]}; i++)); do
 		counter=1
 		while IFS= read -r file; do
 			[ -f "$file" ] || continue
@@ -178,13 +197,15 @@ GRADIENTS=(
 								"$file" \
 									"$counter" \
 										"$counter" \
-											"${BOTTOM_MARGINS[$i]}"
+											"${BOTTOM_MARGINS[$i]}" \
+												"${CORNER_RADIUS_DIVIDERS[$i]}" \
+													"${SHADOW_DIVIDERS[$i]}"
 
 			counter=$((counter + 1))
 		done < <(find "${SCREENSHOTS_DIRS[$i]}" -maxdepth 1 -iname "*.png" | sort -V)
 	done
 
-	# echo "🧪 Cleaning up temporary files..."
-	# rm -rf "$temp_path"
+	echo "🧪 Cleaning up temporary files..."
+	rm -rf "$temp_path"
 
 	echo "🎯 All done! Check: $output1_path and $output2_path"
